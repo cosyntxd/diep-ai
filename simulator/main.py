@@ -1,6 +1,5 @@
+def main():
+    pass
 
-while true:
-    send_events()
-    get_events()
-    act()
-
+if __name__ == "__main__":
+    main()
