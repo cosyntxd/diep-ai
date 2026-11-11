@@ -1,6 +1,7 @@
-import math
-from .spatial import HashGrid, CELL_SIZE
+from __future__ import annotations
 
+import math
+from .spatial import HashGrid, CELL_SIZE, MAX_RADIUS
 
 class EntityTracker:
     def __init__(self):
@@ -12,7 +13,7 @@ class EntityTracker:
 
     def tick_all(self):
         for e in list(self.entities.values()):
-            e.tick
+            e.tick()
 
     # cannot modify len(self.entities) while iterating :(
     def add_immediate(self, e: GameObject) -> GameObject:
@@ -49,12 +50,8 @@ class EntityTracker:
             self.entities.pop(e.uuid, None)
         self.to_delete.clear()
 
-    def query_rect(self, c_x: float, c_y: float, w: float, h: float, radius: float = 0.0) -> list[GameObject]:
-        return self.grid.query_rect(c_x, c_y, w, h, radius)
-
-    # idk?
-    def query_circle(self, x: float, y: float, r: float) -> list[GameObject]:
-        return self.grid.query_circle(x, y, r)
+    def query_rect(self, c_x: float, c_y: float, w: float, h: float) -> list[GameObject]:
+        return self.grid.query_rect(c_x, c_y, w, h)
 
 
 class GameObject:
@@ -136,6 +133,18 @@ class GameObject:
 
     def get_chunk(self) -> tuple[int, int]:
         return math.floor(self.pos_x / CELL_SIZE), math.floor(self.pos_y / CELL_SIZE)
+
+
+    def query_collisions(self):
+        potential = self.tracker.grid.query_rect(
+            self.pos_x, self.pos_y,
+            self.radius + MAX_RADIUS, self.radius + MAX_RADIUS
+        )
+        collisions = []
+        for possible in potential:
+            if self.collides_with(possible):
+                collisions.append(possible)
+        return collisions
 
     def remove(self):
         self.tracker.remove(self)

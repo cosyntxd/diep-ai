@@ -1,7 +1,7 @@
 import math
 
 CELL_SIZE = 32
-
+MAX_RADIUS = 31 # only occupy 3 cells
 
 class HashGrid:
     def __init__(self, cell_size: int = CELL_SIZE):
@@ -35,16 +35,13 @@ class HashGrid:
         self.insert(e)
 
     # account for radius????
-    def query_rect(self, c_x: float, c_y: float, w: float, h: float, radius: float = 0.0) -> list:
+    def query_rect(self, c_x: float, c_y: float, w: float, h: float) -> list:
         results = []
-        min_x = math.floor((c_x - w - radius) / self.cell_size)
-        max_x = math.floor((c_x + w + radius) / self.cell_size)
-        min_y = math.floor((c_y - h - radius) / self.cell_size)
-        max_y = math.floor((c_y + h + radius) / self.cell_size)
+        min_x = math.floor((c_x - w) / self.cell_size)
+        max_x = math.floor((c_x + w) / self.cell_size)
+        min_y = math.floor((c_y - h) / self.cell_size)
+        max_y = math.floor((c_y + h) / self.cell_size)
         for gx in range(min_x, max_x + 1):
             for gy in range(min_y, max_y + 1):
                 results.extend(self.cells.get((gx, gy), ()))
         return results
-
-    def query_circle(self, x: float, y: float, r: float) -> list:
-        return self.query_rect(x, y, 0.0, 0.0, r)
