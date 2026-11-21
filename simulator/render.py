@@ -1,3 +1,4 @@
+import math
 import os
 import shutil
 import av
@@ -6,6 +7,21 @@ import numpy as np
 from queue import Queue
 from threading import Thread
 from simulator.engine import Engine
+from simulator.entities.shapes import Shape
+from simulator.entities.tanks import TankAgent
+from simulator.entities.projectile import Bullet
+
+
+def hex_to_bgr(hex_color: str) -> tuple[int, int, int]:
+    hex_color = hex_color.lstrip("#")
+    r = int(hex_color[0:2], 16)
+    g = int(hex_color[2:4], 16)
+    b = int(hex_color[4:6], 16)
+    return (b, g, r)
+
+
+def darken(bgr: tuple[int, int, int], factor: float = 0.7) -> tuple[int, int, int]:
+    return (int(bgr[0] * factor), int(bgr[1] * factor), int(bgr[2] * factor))
 
 
 class Renderer:
@@ -76,9 +92,44 @@ class Renderer:
                 self.writer.close()
 
     def render(self, engine: Engine) -> None:
-        image = np.zeros((2000, 2000, 3), dtype=np.uint8)
-        for pos in range(0, 2000, 100):
-            cv2.line(image, (pos, 0), (pos, 1999), (255, 255, 255), 4)
-            cv2.line(image, (0, pos), (1999, pos), (255, 255, 255), 4)
+        w, h = 2000, 2000
+        sx = w / engine.width
+        sy = h / engine.height
+        scale = min(sx, sy)
+
+        image = np.full((h, w, 3), 205, dtype=np.uint8)
+
+        for x in range(0, w, 100):
+            cv2.line(image, (x, 0), (x, h - 1), (190, 190, 190), 2)
+        for y in range(0, h, 100):
+            cv2.line(image, (0, y), (w - 1, y), (190, 190, 190), 2)
+
+        for e in engine.tracker.entities.values():
+            color = hex_to_bgr(e.color)
+            outline = darken(color)
+            cx, cy = int(e.pos_x * sx), int(e.pos_y * sy)
+            r = max(1, int(e.radius * scale))
+
+            if isinstance(e, Shape):
+                pts = np.array([
+                    [
+                        int((e.pos_x + math.cos(e.angle + i * math.tau / e.sides) * e.radius) * sx),
+                        int((e.pos_y + math.sin(e.angle + i * math.tau / e.sides) * e.radius) * sy),
+                    ]
+                    for i in range(e.sides)
+                ], dtype=np.int32)
+                cv2.fillPoly(image, [pts], color, cv2.LINE_AA)
+                cv2.polylines(image, [pts], True, outline, 1, cv2.LINE_AA)
+
+            elif isinstance(e, TankAgent):
+                bx = int((e.pos_x + math.cos(e.angle) * e.radius * 1.6) * sx)
+                by = int((e.pos_y + math.sin(e.angle) * e.radius * 1.6) * sy)
+                cv2.line(image, (cx, cy), (bx, by), (110, 110, 110), max(1, int(r * 0.8)), cv2.LINE_AA)
+                cv2.circle(image, (cx, cy), r, color, -1, cv2.LINE_AA)
+                cv2.circle(image, (cx, cy), r, outline, 1, cv2.LINE_AA)
+
+            elif isinstance(e, Bullet):
+                cv2.circle(image, (cx, cy), r, color, -1, cv2.LINE_AA)
+                cv2.circle(image, (cx, cy), r, outline, 1, cv2.LINE_AA)
 
         self.buffered_frames.put(image, timeout=30)

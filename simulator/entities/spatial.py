@@ -1,7 +1,7 @@
 import math
 
-CELL_SIZE = 32
-MAX_RADIUS = 31 # only occupy 3 cells
+CELL_SIZE = 64
+MAX_RADIUS = CELL_SIZE * 2 - 1
 
 class HashGrid:
     def __init__(self, cell_size: int = CELL_SIZE):
